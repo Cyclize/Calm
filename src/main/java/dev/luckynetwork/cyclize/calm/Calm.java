@@ -3,6 +3,7 @@ package dev.luckynetwork.cyclize.calm;
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.command.CommandExecuteEvent;
+import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.Plugin;
@@ -91,6 +92,12 @@ public class Calm {
             }
 
             commandCooldown.put(username, currentTime + (cooldown * 100));
+        });
+
+        server.getEventManager().register(this, DisconnectEvent.class, disconnectEvent -> {
+           String username = disconnectEvent.getPlayer().getUsername();
+           chatCooldown.remove(username);
+           commandCooldown.remove(username);
         });
     }
 }
