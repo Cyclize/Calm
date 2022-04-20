@@ -40,7 +40,7 @@ public class Calm {
             String username = player.getUsername();
             long currentTime = System.currentTimeMillis();
             long liftCooldown = 0;
-            long cooldown = 5;
+            long cooldown = 50;
 
             for (int i = 0; i <= 100; i++) {
                 if (player.hasPermission("calm.chat." + i)) {
@@ -70,7 +70,7 @@ public class Calm {
             String username = player.getUsername();
             long currentTime = System.currentTimeMillis();
             long liftCooldown = 0;
-            long cooldown = 5;
+            long cooldown = 50;
 
             for (int i = 0; i <= 100; i++) {
                 if (player.hasPermission("calm.command." + i)) {
