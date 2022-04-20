@@ -42,7 +42,7 @@ public class Calm {
             long liftCooldown = 0;
             long cooldown = 5;
 
-            for (int i = 0; i <= 99; i++) {
+            for (int i = 0; i <= 100; i++) {
                 if (player.hasPermission("calm.chat." + i)) {
                     cooldown = i;
                     break;
@@ -72,7 +72,7 @@ public class Calm {
             long liftCooldown = 0;
             long cooldown = 5;
 
-            for (int i = 0; i <= 99; i++) {
+            for (int i = 0; i <= 100; i++) {
                 if (player.hasPermission("calm.command." + i)) {
                     cooldown = i;
                     break;
@@ -85,7 +85,7 @@ public class Calm {
 
             if (liftCooldown > currentTime) {
                 double intervalSeconds = (liftCooldown - currentTime) / 1000.0;
-                player.sendMessage(Component.text("You can send another message in " + new DecimalFormat("#.#").format(intervalSeconds) + " seconds!", NamedTextColor.RED));
+                player.sendMessage(Component.text("You can execute another command in " + new DecimalFormat("#.#").format(intervalSeconds) + " seconds!", NamedTextColor.RED));
                 executeEvent.setResult(CommandExecuteEvent.CommandResult.denied());
                 return;
             }
