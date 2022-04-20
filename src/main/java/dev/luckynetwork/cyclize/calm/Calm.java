@@ -2,6 +2,7 @@ package dev.luckynetwork.cyclize.calm;
 
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.command.CommandExecuteEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.Plugin;
@@ -22,12 +23,14 @@ import java.util.HashMap;
 )
 public class Calm {
     private final ProxyServer server;
-    private final HashMap<String, Long> cooldownQueue;
+    private final HashMap<String, Long> chatCooldown;
+    private final HashMap<String, Long> commandCooldown;
 
     @Inject
     public Calm(ProxyServer server) {
         this.server = server;
-        this.cooldownQueue = new HashMap<>();
+        this.chatCooldown = new HashMap<>();
+        this.commandCooldown = new HashMap<>();
     }
 
     @Subscribe
@@ -39,15 +42,15 @@ public class Calm {
             long liftCooldown = 0;
             long cooldown = 5;
 
-            for (int i = 0; i <= 5; i++) {
-                if (player.hasPermission("calm.cooldown." + i)) {
+            for (int i = 0; i <= 99; i++) {
+                if (player.hasPermission("calm.chat." + i)) {
                     cooldown = i;
                     break;
                 }
             }
 
-            if (cooldownQueue.containsKey(username)) {
-                liftCooldown = cooldownQueue.get(username);
+            if (chatCooldown.containsKey(username)) {
+                liftCooldown = chatCooldown.get(username);
             }
 
             if (liftCooldown > currentTime) {
@@ -57,7 +60,37 @@ public class Calm {
                 return;
             }
 
-            cooldownQueue.put(username, currentTime + (cooldown * 1000));
+            chatCooldown.put(username, currentTime + (cooldown * 100));
+        });
+
+        server.getEventManager().register(this, CommandExecuteEvent.class, executeEvent -> {
+            if (!(executeEvent.getCommandSource() instanceof Player)) return;
+
+            Player player = (Player) executeEvent.getCommandSource();
+            String username = player.getUsername();
+            long currentTime = System.currentTimeMillis();
+            long liftCooldown = 0;
+            long cooldown = 5;
+
+            for (int i = 0; i <= 99; i++) {
+                if (player.hasPermission("calm.command." + i)) {
+                    cooldown = i;
+                    break;
+                }
+            }
+
+            if (commandCooldown.containsKey(username)) {
+                liftCooldown = commandCooldown.get(username);
+            }
+
+            if (liftCooldown > currentTime) {
+                double intervalSeconds = (liftCooldown - currentTime) / 1000.0;
+                player.sendMessage(Component.text("You can send another message in " + new DecimalFormat("#.#").format(intervalSeconds) + " seconds!", NamedTextColor.RED));
+                executeEvent.setResult(CommandExecuteEvent.CommandResult.denied());
+                return;
+            }
+
+            commandCooldown.put(username, currentTime + (cooldown * 100));
         });
     }
 }
