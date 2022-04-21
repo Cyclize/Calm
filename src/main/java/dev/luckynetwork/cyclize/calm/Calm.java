@@ -1,6 +1,7 @@
 package dev.luckynetwork.cyclize.calm;
 
 import com.google.inject.Inject;
+import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.command.CommandExecuteEvent;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
@@ -24,80 +25,92 @@ import java.util.HashMap;
 )
 public class Calm {
     private final ProxyServer server;
-    private final HashMap<String, Long> chatCooldown;
-    private final HashMap<String, Long> commandCooldown;
 
     @Inject
     public Calm(ProxyServer server) {
         this.server = server;
-        this.chatCooldown = new HashMap<>();
-        this.commandCooldown = new HashMap<>();
     }
 
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent initializeEvent) {
-        server.getEventManager().register(this, PlayerChatEvent.class, chatEvent -> {
-            Player player = chatEvent.getPlayer();
-            String username = player.getUsername();
-            long currentTime = System.currentTimeMillis();
-            long liftCooldown = 0;
-            long cooldown = 50;
+        server.getEventManager().register(this, new SpamListener());
+    }
+}
 
-            for (int i = 0; i <= 100; i++) {
-                if (player.hasPermission("calm.chat." + i)) {
-                    cooldown = i;
-                    break;
-                }
+class SpamListener {
+
+    private final HashMap<String, Long> chatCooldown;
+    private final HashMap<String, Long> commandCooldown;
+
+    public SpamListener() {
+        this.chatCooldown = new HashMap<>();
+        this.commandCooldown = new HashMap<>();
+    }
+
+    @Subscribe(order = PostOrder.FIRST)
+    public void onPlayerChat(PlayerChatEvent event) {
+        Player player = event.getPlayer();
+        String username = player.getUsername();
+        long currentTime = System.currentTimeMillis();
+        long liftCooldown = 0;
+        long cooldown = 50;
+
+        for (int i = 0; i <= 100; i++) {
+            if (player.hasPermission("calm.chat." + i)) {
+                cooldown = i;
+                break;
             }
+        }
 
-            if (chatCooldown.containsKey(username)) {
-                liftCooldown = chatCooldown.get(username);
+        if (chatCooldown.containsKey(username)) {
+            liftCooldown = chatCooldown.get(username);
+        }
+
+        if (liftCooldown > currentTime) {
+            double intervalSeconds = (liftCooldown - currentTime) / 1000.0;
+            player.sendMessage(Component.text("You can send another message in " + new DecimalFormat("#.#").format(intervalSeconds) + " seconds!", NamedTextColor.RED));
+            event.setResult(PlayerChatEvent.ChatResult.denied());
+            return;
+        }
+
+        chatCooldown.put(username, currentTime + (cooldown * 100));
+    }
+
+    @Subscribe(order = PostOrder.FIRST)
+    public void onCommandExecute(CommandExecuteEvent event) {
+        if (!(event.getCommandSource() instanceof Player)) return;
+
+        Player player = (Player) event.getCommandSource();
+        String username = player.getUsername();
+        long currentTime = System.currentTimeMillis();
+        long liftCooldown = 0;
+        long cooldown = 50;
+
+        for (int i = 0; i <= 100; i++) {
+            if (player.hasPermission("calm.command." + i)) {
+                cooldown = i;
+                break;
             }
+        }
 
-            if (liftCooldown > currentTime) {
-                double intervalSeconds = (liftCooldown - currentTime) / 1000.0;
-                player.sendMessage(Component.text("You can send another message in " + new DecimalFormat("#.#").format(intervalSeconds) + " seconds!", NamedTextColor.RED));
-                chatEvent.setResult(PlayerChatEvent.ChatResult.denied());
-                return;
-            }
+        if (commandCooldown.containsKey(username)) {
+            liftCooldown = commandCooldown.get(username);
+        }
 
-            chatCooldown.put(username, currentTime + (cooldown * 100));
-        });
+        if (liftCooldown > currentTime) {
+            double intervalSeconds = (liftCooldown - currentTime) / 1000.0;
+            player.sendMessage(Component.text("You can execute another command in " + new DecimalFormat("#.#").format(intervalSeconds) + " seconds!", NamedTextColor.RED));
+            event.setResult(CommandExecuteEvent.CommandResult.denied());
+            return;
+        }
 
-        server.getEventManager().register(this, CommandExecuteEvent.class, executeEvent -> {
-            if (!(executeEvent.getCommandSource() instanceof Player)) return;
+        commandCooldown.put(username, currentTime + (cooldown * 100));
+    }
 
-            Player player = (Player) executeEvent.getCommandSource();
-            String username = player.getUsername();
-            long currentTime = System.currentTimeMillis();
-            long liftCooldown = 0;
-            long cooldown = 50;
-
-            for (int i = 0; i <= 100; i++) {
-                if (player.hasPermission("calm.command." + i)) {
-                    cooldown = i;
-                    break;
-                }
-            }
-
-            if (commandCooldown.containsKey(username)) {
-                liftCooldown = commandCooldown.get(username);
-            }
-
-            if (liftCooldown > currentTime) {
-                double intervalSeconds = (liftCooldown - currentTime) / 1000.0;
-                player.sendMessage(Component.text("You can execute another command in " + new DecimalFormat("#.#").format(intervalSeconds) + " seconds!", NamedTextColor.RED));
-                executeEvent.setResult(CommandExecuteEvent.CommandResult.denied());
-                return;
-            }
-
-            commandCooldown.put(username, currentTime + (cooldown * 100));
-        });
-
-        server.getEventManager().register(this, DisconnectEvent.class, disconnectEvent -> {
-           String username = disconnectEvent.getPlayer().getUsername();
-           chatCooldown.remove(username);
-           commandCooldown.remove(username);
-        });
+    @Subscribe
+    public void onDisconnect(DisconnectEvent event) {
+        String username = event.getPlayer().getUsername();
+        chatCooldown.remove(username);
+        commandCooldown.remove(username);
     }
 }
